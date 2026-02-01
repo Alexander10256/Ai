@@ -1,0 +1,196 @@
+{
+  "name": "AI Scout Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "hour": 8
+        }
+      },
+      "id": "e3a8b4c2-a1b2-4d5e-8f6g-7h8i9j0k1l2m",
+      "name": "Run Daily at 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        340
+      ],
+      "trigger": {}
+    },
+    {
+      "parameters": {
+        "url": "https://api.publicapis.org/entries",
+        "options": {}
+      },
+      "id": "f9a8b7c6-d5e4-4f3g-8h2i-1j0k9l8m7n6b",
+      "name": "Get API List",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        720,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "itemList",
+        "operation": "splitOutItems",
+        "fieldToSplitOut": "body.entries",
+        "options": {}
+      },
+      "id": "ba8c9d0e-1f2a-3b4c-5d6e-7f8g9h0i1j2k",
+      "name": "Split Out Entries",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [
+        900,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Loop Through Each API",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this API:\n- Name: {{ $json.API }}\n- Description: {{ $json.Description }}\n- Category: {{ $json.Category }}\n- Auth Model: {{ $json.Auth }}",
+        "options": {
+          "systemMessage": "You are a Venture Capitalist scouting for valuable 'hidden gem' APIs. A 'hidden gem' meets these criteria:\n1.  **Niche & Valuable:** It's in a specific, profitable category (e.g., Finance, AI, Geocoding, Sports Data, Marketing), not a generic one (like 'Games' or 'Anime').\n2.  **Accessible:** The auth model is 'apiKey' or completely 'null' (free). Avoid 'OAuth' unless it's a major service.\n3.  **Uncommon:** It's not a mega-brand like Google, Facebook, etc.\n\nAnalyze the API provided below. Is it a potential hidden gem for a commercial 'API-flipper' project? Respond ONLY with a single, valid JSON object.\nIf it is a gem, respond with: `{\"is_gem\": true, \"name\": \"API Name\", \"description\": \"API Description\", \"category\": \"API Category\", \"link\": \"API Link\", \"reason\": \"A brief explanation of why it's a good find\"}`.\nIf it's not, respond with: `{\"is_gem\": false}`."
+        }
+      },
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "name": "AI Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        1260,
+        340
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ JSON.parse($json.output).is_gem }}"
+            }
+          ]
+        }
+      },
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "name": "Is it a Gem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=💎 *Найден потенциальный API-алмаз!*\n\n**Название:** {{ JSON.parse($('AI Analyst').item.json.output).name }}\n**Категория:** {{ JSON.parse($('AI Analyst').item.json.output).category }}\n\n**Описание:**\n{{ JSON.parse($('AI Analyst').item.json.output).description }}\n\n**Почему это интересно:**\n{{ JSON.parse($('AI Analyst').item.json.output).reason }}\n\n**Ссылка:**\n{{ JSON.parse($('AI Analyst').item.json.output).link }}",
+        "additionalFields": {}
+      },
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8g",
+      "name": "Send Gem to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1740,
+        340
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_ID",
+          "name": "Telegram Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Run Daily at 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Get API List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get API List": {
+      "main": [
+        [
+          {
+            "node": "Split Out Entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Entries": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Each API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Each API": {
+      "main": [
+        [
+          {
+            "node": "AI Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Analyst": {
+      "main": [
+        [
+          {
+            "node": "Is it a Gem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is it a Gem?": {
+      "main": [
+        [
+          {
+            "node": "Send Gem to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
